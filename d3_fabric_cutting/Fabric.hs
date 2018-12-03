@@ -30,7 +30,7 @@ greatest c n = (maxX, maxY)
                     True    -> (fromTop n + height n)
                     False   -> snd c
 
-getMaxSize :: [Claim] -> (Int, Int) 
+getMaxSize :: [Claim] -> (Int, Int)
 getMaxSize = foldl greatest (0, 0)
 
 
@@ -40,10 +40,10 @@ coversInch c (x,y) = case ((x >= x1 && x <= x2) && (y >= y1 && y <= y2)) of
                         False   -> False
                        where
                             x1 = fromLeft c + 1
-                            x2 = fromLeft c + width c 
+                            x2 = fromLeft c + width c
                             y1 = fromTop c + 1
                             y2 = fromTop c + height c
-                       
+
 
 inchCoveredTimes :: [Claim] -> (Int, Int) -> Int
 inchCoveredTimes (c:cs) (x, y) = case (coversInch c (x, y)) of
@@ -52,16 +52,37 @@ inchCoveredTimes (c:cs) (x, y) = case (coversInch c (x, y)) of
 inchCoveredTimes [] _          = 0
 
 calcOverlaps :: [Claim] -> [((Int, Int), Int)]
-calcOverlaps cs = fmap (\coords -> 
-                            (coords, inchCoveredTimes cs coords)) 
-                                        [(x, y) | x <- [1..(fst $ getMaxSize cs)], y <- [1..(snd $ getMaxSize cs)]]
+calcOverlaps cs = fmap (\coords ->
+                            (coords, inchCoveredTimes cs coords))
+                                        [(x, y) | x <- [1..(fst $ getMaxSize cs)],
+                                                  y <- [1..(snd $ getMaxSize cs)]]
 
 getRes1 :: [String] -> Int
 getRes1 ss = length $ filter (\x -> snd x >= 2) $ calcOverlaps $ fmap parseClaim ss
 
+getArea :: Claim -> [(Int, Int)]
+getArea c = [(x, y) | x <- [(fromLeft c + 1)..(fromLeft c + width c)],
+                      y <- [(fromTop c + 1)..(fromTop c + height c)]]
+
+extractCoverage :: [((Int, Int), Int)] -> (Int, Int) -> Int
+extractCoverage (a:as) (x,y) = case (fst (fst a) == x && snd (fst a) == y) of
+                                    True -> snd a
+                                    False -> extractCoverage as (x,y)
+
+isOnlyInhabitant :: Claim -> [((Int, Int), Int)] -> Bool
+isOnlyInhabitant c as = inspect (getArea c)
+    where inspect (x:xs) = case (extractCoverage as x) of
+                            1 -> inspect xs
+                            _ -> False
+          inspect []     = True
+
+getRes2 :: [String] -> [Claim]
+getRes2 ss = filter (\x -> isOnlyInhabitant x overlaps) claims
+        where claims = fmap parseClaim ss
+              overlaps = calcOverlaps claims
 
 main :: IO ()
 main = do
     inp <- readFile "data.txt"
-    putStrLn ("Result is : " ++ show (getRes1 $ lines inp))
-
+    putStrLn ("Result 1: " ++ show (getRes1 $ lines inp))
+    putStrLn ("Result2 is : " ++ show (getRes2 $ lines inp))

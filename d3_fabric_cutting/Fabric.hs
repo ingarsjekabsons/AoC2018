@@ -21,8 +21,6 @@ parseClaim s = Claim cId fLeft fTop w h
             h       = read (dropUntilFirst 'x' s) :: Int
 
 
-getSize :: Claim -> (Int, Int)
-getSize c = (fromLeft c + width c, fromTop c + height c) 
 greatest :: (Int, Int) -> Claim -> (Int, Int)
 greatest c n = (maxX, maxY)
     where maxX = case (fromLeft n + width n > fst c) of

@@ -10,18 +10,18 @@ data Action = Begins | FallsAsleep | WakesUp
 -- [1518-11-01 00:05] falls asleep
 -- [1518-11-01 00:25] wakes up
 
-data NotParsedRecord = NotParsedRecord {
+data TimedRecord = TimedRecord {
     dateTime :: UTCTime,
     record   :: String
 } deriving (Show)
 
 
 -- make Eq and Ord in order to sort events in chronological order
-instance Eq NotParsedRecord where
-    (NotParsedRecord t1 _) == (NotParsedRecord t2 _) = t1 == t2
+instance Eq TimedRecord where
+    (TimedRecord t1 _) == (TimedRecord t2 _) = t1 == t2
 
-instance Ord NotParsedRecord where
-    NotParsedRecord t1 _ `compare` NotParsedRecord t2 _ = t1 `compare` t2
+instance Ord TimedRecord where
+    TimedRecord t1 _ `compare` TimedRecord t2 _ = t1 `compare` t2
 
 
 data SleepingRecord = SleepingRecord {
@@ -45,10 +45,10 @@ parseAction s = case (take 1 $ drop 1 $ dropWhile (\x -> x /= ']') s ) of
                     "f" -> FallsAsleep
                     "w" -> WakesUp
 
-preParse :: String -> NotParsedRecord
-preParse s = NotParsedRecord (getUTC s) (drop 1 $ dropWhile (\x -> x /= ']') s)
+preParse :: String -> TimedRecord
+preParse s = TimedRecord (getUTC s) (drop 1 $ dropWhile (\x -> x /= ']') s)
 
-xx :: [NotParsedRecord] -> [SleepingRecord]
+xx :: [TimedRecord] -> [SleepingRecord]
 xx (r:rs) = helper (r:rs) SleepingRecord  (formatTime defaultTimeLocale "%m%d" (dateTime r)) (getGuardNo $ record r) 0
     where helper (x:xs) curRec  = undefined
 

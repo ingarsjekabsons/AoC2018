@@ -2,6 +2,7 @@ module Guards where
 
 import Data.Time
 import Data.List
+import qualified Data.Map as M
 
 data Action = Begins | FallsAsleep | WakesUp
     deriving Show
@@ -15,6 +16,7 @@ data TimedRecord = TimedRecord {
     dateTime :: UTCTime,
     record   :: String
 } deriving (Show)
+
 
 
 -- make Eq and Ord in order to sort events in chronological order
@@ -31,6 +33,35 @@ data SleepingRecord = SleepingRecord {
     minutes :: Int,
     fromTo  :: [(Int, Int)]
 } deriving Show
+
+sumByGuard :: [SleepingRecord] -> M.Map Int Int -> M.Map Int Int
+sumByGuard (r:rs) curMap = case (M.member (guard r) curMap) of
+                               True     -> sumByGuard rs (M.adjust ((minutes r) +) (guard r) curMap)
+                               False    -> sumByGuard rs (M.insert (guard r) (minutes r) curMap)
+sumByGuard [] curMap     = curMap
+
+
+sleepyMinuteHeatMap :: [SleepingRecord] -> M.Map Int Int -> M.Map Int Int
+sleepyMinuteHeatMap recs curMap = foldl recordToHeat curMap recs
+
+recordToHeat :: M.Map Int Int -> SleepingRecord -> M.Map Int Int
+recordToHeat m r = foldl (\m r -> if (M.member r m) then (M.adjust (1 +) r m) else (M.insert r 1 m)) m $ allMins r
+    where allMins r = concat $ fmap (\x -> [fst x .. (snd x - 1)]) (fromTo r)
+
+getGreatestSleeper :: M.Map Int Int -> Int
+getGreatestSleeper = fst . M.foldrWithKey (\k v c -> if (v > snd c) then (k,v) else c) (0,0)
+
+getHottestMinute :: M.Map Int Int -> (Int, Int)
+getHottestMinute = M.foldrWithKey (\k v c -> if (v > snd c) then (k,v) else c) (0,0)
+
+getRes1 :: String -> (Int, (Int, Int))
+getRes1 s = (sleeper, hottestMinStats)
+    where
+        sleeper = getGreatestSleeper sleepingStats
+        sleepingStats = sumByGuard sleepingRecords M.empty
+        sleepingRecords = mkSleepRecords (sort $ fmap preParse $ lines s)
+        hottestMinStats = getHottestMinute (sleepyMinuteHeatMap (filter (\x -> guard x == sleeper) sleepingRecords) M.empty)
+
 
 makeMMDD :: UTCTime -> String
 makeMMDD t = formatTime defaultTimeLocale "%m%d" t
@@ -65,7 +96,7 @@ mkSleepRecords (r:rs) = helper rs (SleepingRecord  (makeMMDD (dateTime r)) (getG
                                                 (makeMMDD (dateTime x))
                                                 (getGuardNo $ record x)
                                                 0
-                                                (fromTo curRec)
+                                                []
                                            ) 0 (0,0) Begins
                 FallsAsleep -> helper xs
                                     (SleepingRecord

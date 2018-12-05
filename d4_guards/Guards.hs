@@ -4,6 +4,7 @@ import Data.Time
 import Data.List
 
 data Action = Begins | FallsAsleep | WakesUp
+    deriving Show
 
 -- raw records:
 -- [1518-11-01 00:00] Guard #10 begins shift
@@ -27,20 +28,26 @@ instance Ord TimedRecord where
 data SleepingRecord = SleepingRecord {
     mmdd    :: String,
     guard   :: Int,
-    minutes :: Int
-}
+    minutes :: Int,
+    fromTo  :: [(Int, Int)]
+} deriving Show
 
+makeMMDD :: UTCTime -> String
+makeMMDD t = formatTime defaultTimeLocale "%m%d" t
+
+getMins :: UTCTime -> Int
+getMins t = read (formatTime defaultTimeLocale "%M" t) :: Int
 
 getUTC :: String -> UTCTime
 getUTC s = (parseTimeOrError True defaultTimeLocale "%Y-%m-%d %R" (extractDateTime s)) :: UTCTime
-    where 
+    where
         extractDateTime s = takeWhile (\x -> x /= ']') (drop 1 s)
 
 getGuardNo :: String -> Int
 getGuardNo s = read (takeWhile (\x -> x /= ' ') $ drop 1 $ dropWhile (\x -> x /= '#') s) :: Int
 
 parseAction :: String -> Action
-parseAction s = case (take 1 $ drop 1 $ dropWhile (\x -> x /= ']') s ) of
+parseAction s = case (take 1 $ drop 1 s ) of
                     "G" -> Begins
                     "f" -> FallsAsleep
                     "w" -> WakesUp
@@ -48,9 +55,32 @@ parseAction s = case (take 1 $ drop 1 $ dropWhile (\x -> x /= ']') s ) of
 preParse :: String -> TimedRecord
 preParse s = TimedRecord (getUTC s) (drop 1 $ dropWhile (\x -> x /= ']') s)
 
-xx :: [TimedRecord] -> [SleepingRecord]
-xx (r:rs) = helper (r:rs) SleepingRecord  (formatTime defaultTimeLocale "%m%d" (dateTime r)) (getGuardNo $ record r) 0
-    where helper (x:xs) curRec  = undefined
+-- we assume first record has action Begins
+mkSleepRecords :: [TimedRecord] -> [SleepingRecord]
+mkSleepRecords (r:rs) = helper rs (SleepingRecord  (makeMMDD (dateTime r)) (getGuardNo $ record r) 0 []) 0 (0,0) Begins
+    where helper (x:xs) curRec mins p action =
+            case (parseAction $ record x) of
+                Begins      -> curRec : helper xs
+                                           (SleepingRecord
+                                                (makeMMDD (dateTime x))
+                                                (getGuardNo $ record x)
+                                                0
+                                                (fromTo curRec)
+                                           ) 0 (0,0) Begins
+                FallsAsleep -> helper xs
+                                    (SleepingRecord
+                                            (makeMMDD $ dateTime x)
+                                            (guard curRec)
+                                            (minutes curRec)
+                                            (fromTo curRec)
+                                    ) (getMins (dateTime x)) ((getMins (dateTime x)),0) FallsAsleep
+                WakesUp     -> helper xs (SleepingRecord
+                                                (makeMMDD $ dateTime x)
+                                                (guard curRec)
+                                                (getMins (dateTime x) - mins + (minutes  curRec))
+                                                ((fst p, (getMins $ dateTime x)):(fromTo curRec))
+                                         ) 0 (0,0) WakesUp
+          helper [] curRec _ _ _ = curRec:[]
 
 
 

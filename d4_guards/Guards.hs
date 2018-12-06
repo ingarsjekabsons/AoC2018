@@ -40,6 +40,18 @@ sumByGuard (r:rs) curMap = case (M.member (guard r) curMap) of
                                False    -> sumByGuard rs (M.insert (guard r) (minutes r) curMap)
 sumByGuard [] curMap     = curMap
 
+uniqGuards :: [SleepingRecord] -> [Int]
+uniqGuards recs = doIt recs []
+    where doIt (r:rs) acc = case (elem (guard r) acc) of
+                                True    -> doIt rs acc
+                                False   -> doIt rs ((guard r):acc)
+          doIt [] acc     = acc
+
+hottestPerGuard :: [SleepingRecord] -> Int -> (Int,Int)
+hottestPerGuard recs g = getHottestMinute $ sleepyMinuteHeatMap (filter (\x -> guard x == g) recs) M.empty
+
+getAllRecords :: [SleepingRecord] -> [Int] -> [(Int, (Int,Int))]
+getAllRecords recs gs = fmap (\g -> (g, (hottestPerGuard recs g))) gs
 
 sleepyMinuteHeatMap :: [SleepingRecord] -> M.Map Int Int -> M.Map Int Int
 sleepyMinuteHeatMap recs curMap = foldl recordToHeat curMap recs
@@ -61,6 +73,13 @@ getRes1 s = (sleeper, hottestMinStats)
         sleepingStats = sumByGuard sleepingRecords M.empty
         sleepingRecords = mkSleepRecords (sort $ fmap preParse $ lines s)
         hottestMinStats = getHottestMinute (sleepyMinuteHeatMap (filter (\x -> guard x == sleeper) sleepingRecords) M.empty)
+
+getRes2 :: String -> (Int, (Int,Int))
+getRes2 s = maxHeat
+    where maxHeat = foldl (\r acc -> if ((snd (snd r)) > snd (snd acc)) then r else acc) (0, (0,0)) records
+          records = getAllRecords sRecs guards
+          sRecs   = mkSleepRecords (sort $ fmap preParse $ lines s)
+          guards  = uniqGuards sRecs
 
 
 makeMMDD :: UTCTime -> String

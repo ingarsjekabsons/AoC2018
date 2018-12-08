@@ -1,7 +1,7 @@
 module Reduce where
 
 import qualified Data.Vector.Unboxed as V
-import Data.Char (ord)
+import Data.Char (ord, toUpper)
 
 isOpposite :: Char -> Char -> Bool
 isOpposite a b = abs (ord a - ord b) == 32
@@ -36,3 +36,14 @@ reduce a = doIt a (V.length a)
                             False   -> doIt r (V.length r)
 
 
+removeElement :: Polymer -> Char -> Polymer
+removeElement p c = V.filter (\e -> toUpper e /= toUpper c) p
+
+simWOElem :: Polymer -> Char -> Int
+simWOElem p c = V.length . reduce $ removeElement p c
+
+getShortest :: Polymer -> [Char] -> Int
+getShortest p cs = doIt p cs (maxBound :: Int)
+    where doIt p (c:cs) m = let mm = simWOElem p c in
+                                if (mm < m) then doIt p cs mm else doIt p cs m
+          doIt p [] m = m

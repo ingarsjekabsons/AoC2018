@@ -65,3 +65,11 @@ areaCovered cs c = foldl (\a x -> if isClosestToMe cs x c then a+1 else a) 0 can
 
 getMaxArea :: [Coord] -> Int
 getMaxArea cs = foldl max 0 (map (areaCovered cs) (middleCoords cs))
+
+distanceToAllCoords :: [Coord] -> Coord -> Distance
+distanceToAllCoords cs p = sum (map (distBetween p) cs)
+
+getRes2 :: [Coord] -> Int
+getRes2 cs = length $ filter (< 10000) $ map (\x -> distanceToAllCoords cs x) coords
+    where coords = [(x,y) | x <- [fst . fst $ mc .. fst . snd $ mc], y <- [snd . fst $ mc .. snd . snd $ mc]]
+          mc = getEdges cs

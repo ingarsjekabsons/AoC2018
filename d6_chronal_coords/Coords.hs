@@ -44,17 +44,6 @@ findClosest cs fi fc fe c i = case (fc (fe (cs V.! i)) (fe c)) of
                 False -> findClosest cs fi fc fe c (fi i)
                 True -> cs V.! i
 
-closestNeighbors :: [Coord] -> Coord -> (Coord, Coord, Coord, Coord)
-closestNeighbors cs c = (x1, x2, y1, y2)
-    where 
-          idX = fromJust (V.elemIndex c vx)
-          x1 = findClosest vx ((flip(-)) 1) (<) snd c (idX-1)
-          x2 = findClosest vx ((+) 1) (<) snd c (idX+1)
-          y1 = findClosest vx ((flip(-)) 1) (>) snd c (idX-1)
-          y2 = findClosest vx ((+) 1) (>) snd c (idX+1)
-          vx = V.fromList $ sort cs
-
-
 closestToCoord :: [Coord] -> Coord -> (Coord, Distance)
 closestToCoord cs co = foldl (\a c -> if (distBetween c co) < (snd a) then (c, distBetween c co) else (if (distBetween c co) == (snd a) then ((-1,-1),distBetween c co) else a)) ((-1,-1),(maxBound :: Int)) cs
 
